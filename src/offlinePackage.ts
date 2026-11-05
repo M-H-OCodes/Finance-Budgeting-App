@@ -34,7 +34,7 @@ export async function downloadOfflineDesktopPackage(): Promise<void> {
   // 2. Fetch and package modern web app assets for offline launcher
   let fetchSuccess = false;
   try {
-    const htmlResp = await fetch('/offline_dist/index.html');
+    const htmlResp = await fetch(import.meta.env.BASE_URL + 'offline_dist/index.html');
     if (htmlResp.ok) {
       let htmlText = await htmlResp.text();
       htmlText = htmlText
@@ -57,7 +57,7 @@ export async function downloadOfflineDesktopPackage(): Promise<void> {
 
       for (const assetPath of assetUrls) {
         const cleanPath = assetPath.replace(/^\./, '');
-        const urlToFetch = '/offline_dist' + cleanPath;
+        const urlToFetch = import.meta.env.BASE_URL + 'offline_dist' + cleanPath;
         const zipTargetPath = 'offline_ui' + cleanPath;
         try {
           const resp = await fetch(urlToFetch);
@@ -72,9 +72,9 @@ export async function downloadOfflineDesktopPackage(): Promise<void> {
 
       // Also include standard offline files
       const extras = [
-        { url: '/offline_dist/icon.svg', path: 'offline_ui/icon.svg', isBinary: false },
-        { url: '/offline_dist/manifest.webmanifest', path: 'offline_ui/manifest.webmanifest', isBinary: false },
-        { url: '/offline_dist/favicon.ico', path: 'offline_ui/favicon.ico', isBinary: true }
+        { url: import.meta.env.BASE_URL + 'offline_dist/icon.svg', path: 'offline_ui/icon.svg', isBinary: false },
+        { url: import.meta.env.BASE_URL + 'offline_dist/manifest.webmanifest', path: 'offline_ui/manifest.webmanifest', isBinary: false },
+        { url: import.meta.env.BASE_URL + 'offline_dist/favicon.ico', path: 'offline_ui/favicon.ico', isBinary: true }
       ];
 
       for (const extra of extras) {

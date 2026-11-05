@@ -5,7 +5,10 @@ import {defineConfig} from 'vite';
 import {VitePWA} from 'vite-plugin-pwa';
 
 export default defineConfig(() => {
+  // GitHub Pages serves the app from /<repo>/; the deploy workflow sets BASE_PATH.
+  const base = process.env.BASE_PATH || '/';
   return {
+    base,
     plugins: [
       react(),
       tailwindcss(),
@@ -13,30 +16,30 @@ export default defineConfig(() => {
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icon.svg'],
         manifest: {
-          id: '/',
+          id: base,
           name: 'Personal Finance Manager - Hostel Edition',
           short_name: 'FinanceApp',
           description: 'Personal Finance Manager for students managing monthly expenses and savings goals.',
           theme_color: '#0f172a',
           background_color: '#0f172a',
           display: 'standalone',
-          start_url: '/',
-          scope: '/',
+          start_url: base,
+          scope: base,
           icons: [
             {
-              src: '/pwa-192x192.png',
+              src: 'pwa-192x192.png',
               sizes: '192x192',
               type: 'image/png',
               purpose: 'any',
             },
             {
-              src: '/pwa-512x512.png',
+              src: 'pwa-512x512.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any',
             },
             {
-              src: '/pwa-maskable-512x512.png',
+              src: 'pwa-maskable-512x512.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'maskable',
@@ -47,7 +50,7 @@ export default defineConfig(() => {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
           // the desktop-package copy of the app is fetched on demand, not precached
           globIgnores: ['offline_dist/**'],
-          navigateFallbackDenylist: [/^\/offline_dist\//, /^\/__\//],
+          navigateFallbackDenylist: [/offline_dist\//, /\/__\//],
         },
         devOptions: {
           enabled: true,

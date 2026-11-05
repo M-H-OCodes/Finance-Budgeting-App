@@ -132,7 +132,7 @@ function Workspace({ user, onSignOut }: { user: AppUser; onSignOut: () => void }
     for (const f of fresh) {
       toast(f.title, f.level === 'DANGER' ? 'bad' : 'warn');
       try {
-        if ('Notification' in window && Notification.permission === 'granted') new Notification(f.title, { body: f.message, icon: '/pwa-192x192.png', tag: f.key });
+        if ('Notification' in window && Notification.permission === 'granted') new Notification(f.title, { body: f.message, icon: import.meta.env.BASE_URL + 'pwa-192x192.png', tag: f.key });
       } catch {
         /* some mobile browsers only allow notifications from a service worker */
       }
