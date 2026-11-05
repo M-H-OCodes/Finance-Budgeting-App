@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </linearGradient>
+    <linearGradient id="emerald" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="108" fill="url(#bg)" />
+
+  <!-- Outer Glow Ring -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="#38bdf8" stroke-width="6" opacity="0.25" />
+
+  <!-- Wallet Body -->
+  <rect x="136" y="176" width="240" height="170" rx="26" fill="url(#accent)" />
+  <path d="M136 210 C136 186 156 166 180 166 L332 166 C356 166 376 186 376 210 Z" fill="#0369a1" opacity="0.6" />
+
+  <!-- Wallet Flap & Clasp -->
+  <rect x="270" y="226" width="116" height="70" rx="18" fill="#0f172a" />
+  <circle cx="348" cy="261" r="14" fill="url(#emerald)" />
+  <circle cx="348" cy="261" r="7" fill="#ffffff" />
+
+  <!-- Currency Coin / Badge -->
+  <circle cx="200" cy="261" r="32" fill="#ffffff" opacity="0.9" />
+  <text x="200" y="272" font-family="system-ui, sans-serif" font-size="28" font-weight="900" fill="#0369a1" text-anchor="middle">₨</text>
+
+  <!-- Student Graduation Cap Mini Crest -->
+  <path d="M256 96 L336 136 L256 176 L176 136 Z" fill="url(#emerald)" />
+  <polygon points="310,154 310,188 322,188 322,154" fill="#34d399" />
+  <circle cx="316" cy="192" r="5" fill="#34d399" />
+</svg>

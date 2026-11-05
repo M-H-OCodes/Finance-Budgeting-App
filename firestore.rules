@@ -1,0 +1,67 @@
+rules_version = '2';
+
+// Security rules for the Personal Finance Manager.
+// Paste into Firebase console → Firestore Database → Rules → Publish.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function verified() { return signedIn() && request.auth.token.email_verified == true; }
+    // The ONLY admin account. Must also have a verified email.
+    function isAdmin() {
+      return verified() && request.auth.token.email == 'muhammadhadi.officialwork@gmail.com';
+    }
+    function userPath(uid) { return /databases/$(database)/documents/users/$(uid); }
+
+    // ---- Live user counter --------------------------------------------
+    // Anyone (even signed out) can read it. It can only go up by exactly 1,
+    // and only in the same transaction that creates the caller's own users/{uid}
+    // document for the first time, so every account is counted once.
+    match /stats/public {
+      allow read: if true;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['userCount'])
+        && request.resource.data.userCount == 51
+        && !exists(userPath(request.auth.uid))
+        && existsAfter(userPath(request.auth.uid));
+      allow update: if signedIn()
+        && request.resource.data.keys().hasOnly(['userCount'])
+        && request.resource.data.userCount == resource.data.userCount + 1
+        && !exists(userPath(request.auth.uid))
+        && existsAfter(userPath(request.auth.uid));
+      allow delete: if false;
+    }
+
+    // ---- User profiles (admin directory) ---------------------------------
+    // emailVerified may only mirror what Firebase Auth says about the account.
+    function honestVerified() {
+      return !('emailVerified' in request.resource.data)
+        || request.resource.data.emailVerified == request.auth.token.email_verified;
+    }
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.email == request.auth.token.email.lower()
+        && honestVerified();
+      // Owners may update activity/summary fields only, never email or createdAt.
+      allow update: if isOwner(uid)
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['lastActive', 'summary', 'emailVerified', 'name'])
+        && honestVerified();
+      // Deleting would let someone re-register and inflate the counter.
+      allow delete: if isAdmin();
+    }
+
+    // ---- Private finance data -------------------------------------------
+    // Only the verified owner can read or write their own data.
+    match /finance/{uid} {
+      allow read, write: if isOwner(uid) && verified();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "IB CS IA: Student Personal Finance Manager",
+  "description": "Complete Python + SQLite + Tkinter + Matplotlib Internal Assessment product for a hostel medical student on a 40,000 PKR stipend.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
