@@ -66,7 +66,7 @@ export function isAdminUser(user: Pick<User, 'email' | 'emailVerified'> | null |
   return !!user && user.emailVerified && (user.email ?? '').trim().toLowerCase() === ADMIN_EMAIL;
 }
 
-export const verificationSettings = () => ({ url: window.location.origin, handleCodeInApp: false });
+export const verificationSettings = () => ({ url: window.location.origin + import.meta.env.BASE_URL, handleCodeInApp: false });
 
 /**
  * Creates the account, sends the one-time verification link and counts the

@@ -118,7 +118,7 @@ export function emptyFinanceData(): FinanceData {
   return {
     version: 2,
     updatedAt: Date.now(),
-    monthlyIncome: 40000,
+    monthlyIncome: 0,
     categories: PREDEFINED_CATEGORIES.map((c) => ({ ...c })),
     budgets: {},
     transactions: [],
@@ -707,4 +707,13 @@ export function migrateLegacy(): FinanceData | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Accounts created before the setup wizard existed start with a placeholder
+ * income of 40,000 and nothing else. They show invented savings, so they are
+ * sent through setup again instead.
+ */
+export function needsSetup(d: FinanceData): boolean {
+  return d.monthlyIncome === 40000 && d.transactions.length === 0 && d.goals.length === 0 && Object.keys(d.budgets).length === 0;
 }

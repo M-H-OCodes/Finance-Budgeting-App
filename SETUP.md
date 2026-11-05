@@ -93,3 +93,13 @@ npm run build:offline  # also refreshes the desktop (.zip) copy of the app
 ## Development preview without Firebase
 
 While `.env.local` is missing, `npm run dev` shows a **Firebase setup needed** screen with **Preview as student / Preview as admin** buttons, so you can click through the UI. Those buttons only exist in development builds and are removed from `npm run build`.
+
+## Verification-email landing page (optional but recommended)
+
+By default Firebase shows its own "email verified" page. To show this app's page
+("Done! Email verified – go back to the app") instead:
+
+1. Firebase console → Authentication → Templates → **Email address verification** → pencil icon.
+2. Click **Customize action URL** and enter your site address, e.g.
+   `https://m-h-ocodes.github.io/Finance-Budgeting-App/`
+3. Save.

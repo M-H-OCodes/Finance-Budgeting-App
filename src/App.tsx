@@ -24,6 +24,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { useAuth, useFinanceStore, type AppUser } from './hooks';
+import { isFirebaseConfigured } from './firebase';
 import {
   type FinanceData,
   type Transaction,
@@ -34,10 +35,14 @@ import {
   downloadFile,
   emptyFinanceData,
   monthLabel,
+  needsSetup,
+  PREDEFINED_CATEGORIES,
+  fmt,
   sampleFinanceData,
+  todayISO,
   shiftMonth,
 } from './finance';
-import { AuthScreen, LoadingScreen, VerifyEmailScreen } from './AuthScreens';
+import { AuthScreen, EmailActionScreen, LoadingScreen, VerifyEmailScreen } from './AuthScreens';
 import { UserCounter } from './UserCounter';
 import { AdminPanel } from './AdminPanel';
 import { AddTransaction, Analytics, Budgets, CategoryModal, Dashboard, Goals, History, TransactionForm, type Screen } from './Screens';
@@ -45,8 +50,12 @@ import { Modal } from './ui';
 import { usePWAInstall } from './usePWAInstall';
 import { useOnlineStatus } from './useOnlineStatus';
 
+const actionParams = new URLSearchParams(window.location.search);
+const verifyCode = actionParams.get('mode') === 'verifyEmail' ? actionParams.get('oobCode') : null;
+
 export default function App() {
   const { user, loading, refresh, signOut, startDemo } = useAuth();
+  if (verifyCode && isFirebaseConfigured) return <EmailActionScreen oobCode={verifyCode} />;
   if (loading) return <LoadingScreen />;
   if (!user) return <AuthScreen onDemo={startDemo} />;
   if (!user.emailVerified) return <VerifyEmailScreen user={user} onRefresh={refresh} onSignOut={signOut} />;
@@ -140,7 +149,7 @@ function Workspace({ user, onSignOut }: { user: AppUser; onSignOut: () => void }
   }, [data, update, toast]);
 
   if (!ready && !data) return <LoadingScreen />;
-  if (!data) return <Onboarding user={user} onStart={(d) => replace(d)} />;
+  if (!data || needsSetup(data)) return <Onboarding user={user} onStart={(d) => replace(d)} />;
 
   const unread = data.notifications.filter((n) => !n.read).length;
   const go = (s: Screen) => {
@@ -399,35 +408,147 @@ function NotificationPanel({ data, update, onClose }: { data: FinanceData; updat
 }
 
 // ---------------------------------------------------------------- onboarding
+// Three short steps: income -> monthly budget per category -> optional savings
+// goal. Everything starts at 0, so the forecast only ever uses numbers the
+// person typed in or transactions they record.
 function Onboarding({ user, onStart }: { user: AppUser; onStart: (d: FinanceData) => void }) {
-  const [income, setIncome] = useState('40000');
-  const start = (sample: boolean) => {
-    const d = sample ? sampleFinanceData() : emptyFinanceData();
-    const n = Number(income);
-    if (Number.isFinite(n) && n > 0) d.monthlyIncome = n;
+  const [step, setStep] = useState(0);
+  const [income, setIncome] = useState('');
+  const [limits, setLimits] = useState<Record<number, string>>({});
+  const [goalName, setGoalName] = useState('');
+  const [goalTarget, setGoalTarget] = useState('');
+  const [goalDate, setGoalDate] = useState(`${shiftMonth(currentMonth(), 3)}-28`);
+  const [err, setErr] = useState('');
+  const cats = PREDEFINED_CATEGORIES.filter((c) => c.type === 'expense');
+  const incomeN = Number(income) || 0;
+  const budgetTotal = cats.reduce((s, c) => s + (Number(limits[c.id]) || 0), 0);
+  const left = incomeN - budgetTotal;
+
+  const finish = (withGoal: boolean) => {
+    const d = emptyFinanceData();
+    d.monthlyIncome = incomeN;
+    const b: Record<number, number> = {};
+    for (const c of cats) if (Number(limits[c.id]) > 0) b[c.id] = Number(limits[c.id]);
+    if (Object.keys(b).length) d.budgets[currentMonth()] = b;
+    if (withGoal) {
+      const t = Number(goalTarget);
+      if (!goalName.trim()) return setErr('Give the goal a name, or skip this step.');
+      if (!Number.isFinite(t) || t <= 0) return setErr('Target amount must be greater than 0.');
+      if (goalDate < todayISO()) return setErr('The target date should be in the future.');
+      d.goals = [{ id: Date.now(), name: goalName.trim(), targetAmount: t, targetDate: goalDate, createdAt: todayISO() }];
+    }
     onStart(d);
   };
+
+  const next = () => {
+    setErr('');
+    if (step === 0 && (income.trim() === '' || !Number.isFinite(Number(income)) || Number(income) < 0)) return setErr('Enter your monthly income (use 0 if you have none yet).');
+    setStep(step + 1);
+  };
+
   return (
     <div className="min-h-dvh grid place-items-center bg-[var(--bg)] text-[var(--text)] p-4">
       <div className="absolute top-5 right-5">
         <UserCounter />
       </div>
       <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-7 animate-rise">
-        <div className="text-sm text-emerald-300 font-medium">Email verified ✓</div>
-        <h1 className="text-xl font-semibold tracking-tight mt-1">Welcome, {user.displayName}</h1>
-        <p className="text-sm text-[var(--muted)] mt-1.5">How much do you usually receive each month? This is used to forecast your savings and suggest budgets. You can change it later.</p>
-        <label className="block mt-5">
-          <span className="label">Monthly income / stipend (PKR)</span>
-          <input className="input tabular-nums" type="number" min="0" value={income} onChange={(e) => setIncome(e.target.value)} />
-        </label>
-        <div className="mt-5 space-y-2">
-          <button className="btn-primary w-full !py-2.5" onClick={() => start(false)}>
-            Start with a clean slate
-          </button>
-          <button className="btn-secondary w-full !py-2.5" onClick={() => start(true)}>
-            Explore with sample data first
-          </button>
+        <div className="text-sm text-emerald-300 font-medium">Email verified ✓ · Step {step + 1} of 3</div>
+        <h1 className="text-xl font-semibold tracking-tight mt-1">{step === 0 ? `Welcome, ${user.displayName}` : step === 1 ? 'Plan your monthly budget' : 'Set a savings goal'}</h1>
+
+        {step === 0 && (
+          <>
+            <p className="text-sm text-[var(--muted)] mt-1.5">How much money do you receive each month? Your savings forecast starts from this. You can change it later in Settings.</p>
+            <label className="block mt-5">
+              <span className="label">Monthly income / stipend (PKR)</span>
+              <input className="input tabular-nums" type="number" min="0" inputMode="numeric" placeholder="0" value={income} onChange={(e) => setIncome(e.target.value)} autoFocus />
+            </label>
+          </>
+        )}
+
+        {step === 1 && (
+          <>
+            <p className="text-sm text-[var(--muted)] mt-1.5">How much do you plan to spend on each category this month? Leave any blank to skip it. Predictions improve as you record real spending.</p>
+            <div className="mt-4 space-y-2">
+              {cats.map((c) => (
+                <label key={c.id} className="flex items-center justify-between gap-3">
+                  <span className="text-sm">{c.name}</span>
+                  <input
+                    className="input !w-32 text-right tabular-nums !py-1.5"
+                    type="number"
+                    min="0"
+                    inputMode="numeric"
+                    placeholder="0"
+                    aria-label={`${c.name} budget`}
+                    value={limits[c.id] ?? ''}
+                    onChange={(e) => setLimits({ ...limits, [c.id]: e.target.value })}
+                  />
+                </label>
+              ))}
+            </div>
+            <div className="mt-4 rounded-xl bg-white/[0.03] border border-[var(--border)] p-3 flex justify-between text-sm">
+              <span className="text-[var(--muted)]">{left >= 0 ? 'Predicted savings' : 'Over your income by'}</span>
+              <span className={`font-semibold tabular-nums ${left >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>{fmt(Math.abs(left))} PKR</span>
+            </div>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <p className="text-sm text-[var(--muted)] mt-1.5">Optional: what are you saving for? We'll show how close you are and when you'll get there.</p>
+            <div className="mt-4 space-y-3">
+              <label className="block">
+                <span className="label">Goal name</span>
+                <input className="input" placeholder="e.g. New laptop" value={goalName} onChange={(e) => setGoalName(e.target.value)} />
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="label">Target (PKR)</span>
+                  <input className="input tabular-nums" type="number" min="0" inputMode="numeric" value={goalTarget} onChange={(e) => setGoalTarget(e.target.value)} />
+                </label>
+                <label className="block">
+                  <span className="label">By</span>
+                  <input className="input" type="date" value={goalDate} onChange={(e) => setGoalDate(e.target.value)} />
+                </label>
+              </div>
+            </div>
+          </>
+        )}
+
+        {err && <p className="text-xs text-rose-300 mt-3">{err}</p>}
+
+        <div className="mt-6 flex gap-2">
+          {step > 0 && (
+            <button className="btn-secondary" onClick={() => { setErr(''); setStep(step - 1); }}>
+              Back
+            </button>
+          )}
+          {step < 2 ? (
+            <button className="btn-primary flex-1 !py-2.5" onClick={next}>
+              Continue
+            </button>
+          ) : (
+            <>
+              <button className="btn-secondary flex-1 !py-2.5" onClick={() => finish(false)}>
+                Skip
+              </button>
+              <button className="btn-primary flex-1 !py-2.5" onClick={() => finish(true)}>
+                Finish
+              </button>
+            </>
+          )}
         </div>
+        {step === 0 && (
+          <button
+            className="mt-4 w-full text-xs text-[var(--muted)] hover:text-[var(--text)]"
+            onClick={() => {
+              const d = sampleFinanceData();
+              if (incomeN > 0) d.monthlyIncome = incomeN;
+              onStart(d);
+            }}
+          >
+            Just explore with sample data
+          </button>
+        )}
       </div>
     </div>
   );
@@ -488,7 +609,7 @@ function SettingsModal({
             className="btn-primary"
             onClick={() => {
               const n = Number(income);
-              if (!Number.isFinite(n) || n <= 0) return toast('Income must be greater than 0', 'bad');
+              if (!Number.isFinite(n) || n < 0) return toast('Enter 0 or a positive amount', 'bad');
               update((d) => {
                 d.monthlyIncome = n;
               });

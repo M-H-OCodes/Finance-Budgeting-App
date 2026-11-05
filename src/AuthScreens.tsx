@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth';
-import { ArrowLeft, Loader2, LogOut, Mail, MailCheck, RefreshCw, Settings2, Wallet } from 'lucide-react';
+import { applyActionCode, sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth';
+import { ArrowLeft, CheckCircle2, Loader2, LogOut, Mail, MailCheck, RefreshCw, Settings2, Wallet, XCircle } from 'lucide-react';
 import { auth, friendlyAuthError, isFirebaseConfigured, sendVerificationLink, signUp } from './firebase';
 import type { AppUser } from './hooks';
 import { UserCounter } from './UserCounter';
@@ -288,5 +288,60 @@ export function LoadingScreen() {
     <div className="min-h-dvh grid place-items-center bg-[var(--bg)] text-[var(--muted)]">
       <Loader2 className="w-6 h-6 animate-spin" />
     </div>
+  );
+}
+
+// ---------------------------------------------------------------- verification link landing page
+// Firebase sends people here (…/?mode=verifyEmail&oobCode=…) once the email
+// template's action URL points at this site (see SETUP.md).
+let verifyAttempt: Promise<void> | null = null;
+
+export function EmailActionScreen({ oobCode }: { oobCode: string }) {
+  const [state, setState] = useState<'working' | 'ok' | 'bad'>('working');
+  useEffect(() => {
+    if (!auth) return;
+    // applyActionCode only works once per link, so never run it twice.
+    verifyAttempt ??= applyActionCode(auth, oobCode);
+    verifyAttempt.then(
+      () => setState('ok'),
+      () => setState('bad'),
+    );
+  }, [oobCode]);
+  const openApp = () => window.location.replace(import.meta.env.BASE_URL);
+  return (
+    <Shell>
+      <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur p-7 shadow-2xl shadow-black/30 text-center">
+        {state === 'working' && (
+          <>
+            <Loader2 className="w-8 h-8 animate-spin mx-auto text-sky-300" />
+            <p className="text-sm text-[var(--muted)] mt-4">Verifying your email…</p>
+          </>
+        )}
+        {state === 'ok' && (
+          <>
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-emerald-500/15 border border-emerald-400/30 grid place-items-center mb-4">
+              <CheckCircle2 className="w-7 h-7 text-emerald-300" />
+            </div>
+            <h1 className="text-xl font-semibold tracking-tight">Done! Email verified</h1>
+            <p className="text-sm text-[var(--muted)] mt-2">Your account is active. Go back to the app to continue. If you signed up on another device or tab, it will carry on by itself.</p>
+            <button onClick={openApp} className="mt-6 w-full py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold text-sm transition">
+              Go back to the app
+            </button>
+          </>
+        )}
+        {state === 'bad' && (
+          <>
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-rose-500/15 border border-rose-400/30 grid place-items-center mb-4">
+              <XCircle className="w-7 h-7 text-rose-300" />
+            </div>
+            <h1 className="text-xl font-semibold tracking-tight">This link can't be used</h1>
+            <p className="text-sm text-[var(--muted)] mt-2">It has expired or was already used. If you already verified, just open the app. Otherwise sign in and press "Resend verification link".</p>
+            <button onClick={openApp} className="mt-6 w-full py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold text-sm transition">
+              Open the app
+            </button>
+          </>
+        )}
+      </div>
+    </Shell>
   );
 }
