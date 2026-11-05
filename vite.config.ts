@@ -17,7 +17,7 @@ export default defineConfig(() => {
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icon.svg'],
         manifest: {
           id: base,
-          name: 'Personal Finance Manager - Hostel Edition',
+          name: 'Finance Budgeting Management App',
           short_name: 'FinanceApp',
           description: 'Personal Finance Manager for students managing monthly expenses and savings goals.',
           theme_color: '#0f172a',
