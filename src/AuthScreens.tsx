@@ -4,6 +4,7 @@ import { ArrowLeft, CheckCircle2, Loader2, LogOut, Mail, MailCheck, RefreshCw, S
 import { auth, friendlyAuthError, isFirebaseConfigured, sendVerificationLink, signUp } from './firebase';
 import type { AppUser } from './hooks';
 import { UserCounter } from './UserCounter';
+import { InstallButton } from './InstallApp';
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
@@ -22,7 +23,10 @@ function Shell({ children }: { children: React.ReactNode }) {
             <div className="text-[11px] text-[var(--muted)]">Personal finance for students</div>
           </div>
         </div>
-        <UserCounter />
+        <div className="flex items-center gap-2">
+          <InstallButton />
+          <UserCounter />
+        </div>
       </header>
       <main className="relative flex-1 grid place-items-center px-4 pb-10">{children}</main>
     </div>

@@ -47,7 +47,7 @@ import { UserCounter } from './UserCounter';
 import { AdminPanel } from './AdminPanel';
 import { AddTransaction, Analytics, Budgets, CategoryModal, Dashboard, Goals, History, TransactionForm, type Screen } from './Screens';
 import { Modal } from './ui';
-import { usePWAInstall } from './usePWAInstall';
+import { InstallButton } from './InstallApp';
 import { useOnlineStatus } from './useOnlineStatus';
 
 const actionParams = new URLSearchParams(window.location.search);
@@ -219,6 +219,8 @@ function Workspace({ user, onSignOut }: { user: AppUser; onSignOut: () => void }
               </button>
             </div>
           )}
+
+          <InstallButton />
 
           <div className="relative">
             <button onClick={() => setShowBell((v) => !v)} className="relative w-9 h-9 grid place-items-center rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--border-strong)]" aria-label="Notifications">
@@ -575,7 +577,6 @@ function SettingsModal({
   const [income, setIncome] = useState(String(data.monthlyIncome));
   const [zipping, setZipping] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
 
   const importBackup = async (file: File) => {
     try {
@@ -651,17 +652,7 @@ function SettingsModal({
         >
           <FolderDown className="w-3.5 h-3.5" /> {zipping ? 'Packaging…' : 'Desktop app (.zip)'}
         </button>
-        <button
-          className="btn-secondary text-xs"
-          disabled={isInstalled}
-          onClick={async () => {
-            if (isInstallable) await install();
-            else if (isIOS) toast('In Safari: tap Share → Add to Home Screen', 'warn');
-            else toast("Use your browser menu → 'Install app' or 'Add to Home screen'", 'warn');
-          }}
-        >
-          <Smartphone className="w-3.5 h-3.5" /> {isInstalled ? 'Installed' : 'Install on phone'}
-        </button>
+        <InstallButton variant="full" />
       </div>
 
       <div className="mt-5 pt-4 border-t border-[var(--border)] flex flex-wrap gap-2 justify-between">
