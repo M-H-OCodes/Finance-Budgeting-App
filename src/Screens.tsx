@@ -796,7 +796,19 @@ export function Goals({ data, update, month, toast }: ScreenProps) {
           return (
             <Card key={p.goal.id}>
               <div className="flex gap-5 items-center">
-                <ProgressRing pct={p.pct} color={p.isAchieved ? '#34d399' : '#38bdf8'}>
+                <ProgressRing
+                  pct={p.pct}
+                  color={p.isAchieved ? '#34d399' : '#38bdf8'}
+                  tip={{
+                    title: p.goal.name,
+                    lines: [
+                      { label: 'Saved so far', value: `${fmt(p.saved)} PKR` },
+                      { label: 'Target', value: `${fmt(p.goal.targetAmount)} PKR` },
+                      { label: 'Still to go', value: `${fmt(p.remaining)} PKR` },
+                    ],
+                    note: 'The ring fills as your savings reach this goal’s target amount.',
+                  }}
+                >
                   <span className="text-2xl font-semibold tabular-nums">{p.pct.toFixed(0)}%</span>
                   <span className="text-[10px] text-[var(--muted)]">saved</span>
                 </ProgressRing>
